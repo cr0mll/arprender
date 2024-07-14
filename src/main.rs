@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use arprender::{resolve_mac, send_arp_request};
+use arprender::{arp_scan, resolve_mac, send_arp_request};
 use clap::Parser;
 use cli::{Args, Commands};
 
@@ -20,7 +20,18 @@ fn main() {
         Commands::Scan{ interface_name } => {
             match arprender::nic::get_interface_by_name(&interface_name) {
                 Ok(interface) => {
-                    todo!()
+                    match arp_scan(&interface, Duration::from_secs(5))
+                    {
+                        Ok(hosts) => {
+                            for host in &hosts {
+                                println!("Found {} @ {}", host.0, host.1);
+                            }
+                        },
+                        Err(err) => {
+                            println!("{}", err.to_string());
+                        }
+                    }
+                    
                 },
                 Err(err) => { println!("{}", err.to_string()); std::process::exit(1); }
             }

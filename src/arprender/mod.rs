@@ -1,6 +1,7 @@
 use core::fmt;
 use std::net::Ipv4Addr;
-use std::time::{Instant, Duration};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use nic::{InterfaceError, NetworkInterface};
 use pnet::util::MacAddr;
@@ -79,8 +80,11 @@ pub fn send_arp_request(
 }
 
 /// Attempts to find the MAC associated with the given IP address
-pub fn resolve_mac(interface: &NetworkInterface, dest_ip: Ipv4Addr, timeout: Duration) -> Result<Option<MacAddr>, InterfaceError> {
-    
+pub fn resolve_mac(
+    interface: &NetworkInterface,
+    dest_ip: Ipv4Addr,
+    timeout: Duration,
+) -> Result<Option<MacAddr>, InterfaceError> {
     use pnet::datalink::*;
 
     let mut rx = match channel(&interface.clone().into(), Default::default()) {
@@ -91,7 +95,12 @@ pub fn resolve_mac(interface: &NetworkInterface, dest_ip: Ipv4Addr, timeout: Dur
             e
         ),
     };
-    send_arp_request(interface, dest_ip, interface.mac(), interface.ipv4_address())?;
+    send_arp_request(
+        interface,
+        dest_ip,
+        interface.mac(),
+        interface.ipv4_address(),
+    )?;
 
     let start = Instant::now();
 
@@ -99,9 +108,8 @@ pub fn resolve_mac(interface: &NetworkInterface, dest_ip: Ipv4Addr, timeout: Dur
         let buf = rx.next().unwrap();
 
         if buf.len() < ETHERNET_SIZE + ARP_SIZE {
-            if is_timeout_expired(start, timeout)
-            {
-                break; 
+            if is_timeout_expired(start, timeout) {
+                break;
             }
             continue;
         }
@@ -114,12 +122,71 @@ pub fn resolve_mac(interface: &NetworkInterface, dest_ip: Ipv4Addr, timeout: Dur
             return Ok(Some(arp_layer.get_sender_hw_addr()));
         }
 
-        if is_timeout_expired(start, timeout) { break ;}
+        if is_timeout_expired(start, timeout) {
+            break;
+        }
     }
 
     Ok(None)
 }
 
-fn is_timeout_expired(start: Instant, timeout: Duration ) -> bool {
-    Instant::now().duration_since(start) > timeout 
+fn is_timeout_expired(start: Instant, timeout: Duration) -> bool {
+    Instant::now().duration_since(start) > timeout
+}
+
+pub fn arp_scan(interface: &NetworkInterface, timeout: Duration) -> Result<Vec<(Ipv4Addr, MacAddr)>, InterfaceError>{
+    let Some(network) = interface.network() else { return Err(InterfaceError::MissingIP); };
+
+    let Some(interface_mac) = interface.mac() else { return Err(InterfaceError::MissingMAC); };
+    let Some(interface_ip) = interface.ipv4_address() else {return Err(InterfaceError::MissingIP); };
+    let mut hosts: Vec<(Ipv4Addr, MacAddr)> = Vec::new();
+
+    use pnet::datalink::*;
+
+    let mut rx = match channel(&interface.clone().into(), Default::default()) {
+        Ok(Channel::Ethernet(_, rx)) => rx,
+        Ok(_) => panic!("Unhandled channel type"),
+        Err(e) => panic!(
+            "An error occurred when creating the datalink channel: {}",
+            e
+        ),
+    };
+
+
+    // Start the receiver thread
+    let listener = thread::spawn(move || {
+        let start = Instant::now();
+
+        loop {
+            let buf = rx.next().unwrap();
+    
+            if buf.len() < ETHERNET_SIZE + ARP_SIZE {
+                if is_timeout_expired(start, timeout) {
+                    break;
+                }
+                continue;
+            }
+    
+            let arp_layer = ArpPacket::new(&buf[ARP_OFFSET..]).unwrap();
+    
+            if arp_layer.get_target_hw_addr() == interface_mac
+            {
+                hosts.push((arp_layer.get_sender_proto_addr(),arp_layer.get_sender_hw_addr()));
+            }
+    
+            if is_timeout_expired(start, timeout) {
+                break;
+            }
+        }
+
+        hosts
+    });
+
+    for ip in network.into_iter() {
+        send_arp_request(interface, ip, None, None);
+    }
+
+    let hosts = listener.join().unwrap();
+
+    Ok(hosts)
 }

@@ -1,3 +1,5 @@
+use std::net::Ipv4Addr;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -10,5 +12,13 @@ pub struct Args {
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
     /// Lists the available interfaces
-    Interfaces
+    Interfaces,
+    Scan {
+        interface_name: String
+    },
+    Resolve {
+
+        address: Ipv4Addr,
+        interface: String
+    }
 }

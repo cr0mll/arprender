@@ -1,17 +1,46 @@
+use std::time::Duration;
+
+use arprender::{resolve_mac, send_arp_request};
 use clap::Parser;
 use cli::{Args, Commands};
-use pnet::datalink;
 
 pub mod cli;
+pub mod arprender;
 
 fn main() {
     let args = Args::parse();
     
     match args.cmd {
         Commands::Interfaces => {
-            let interfaces = datalink::interfaces();
+            let interfaces = arprender::nic::get_interfaces();
             for interface in interfaces {
-                println!("{} @ {}", interface.name, match interface.mac { Some(addr) => addr.to_string(), None => "None".to_string()});
+                println!("{} @ {}", interface.name(), match interface.mac() { Some(addr) => addr.to_string(), None => "None".to_string()});
+            }
+        },
+        Commands::Scan{ interface_name } => {
+            match arprender::nic::get_interface_by_name(&interface_name) {
+                Ok(interface) => {
+                    todo!()
+                },
+                Err(err) => { println!("{}", err.to_string()); std::process::exit(1); }
+            }
+        },
+        Commands::Resolve { interface, address } => {
+            match arprender::nic::get_interface_by_name(&interface) {
+                Ok(interface) => {
+                    match resolve_mac(&interface, address, Duration::from_secs(10)) {
+                        Ok(mac) => {
+                            match mac {
+                                Some(mac) => {
+                                    println!("IP {} has MAC address {}", address, mac);
+                                },
+                                None => { println!("Failed to resolve address!"); }
+                            }
+                        },
+                        Err(err) => { println!("{}", err.to_string()); std::process::exit(1); }
+                    }
+                },
+                Err(err) => { println!("{}", err.to_string()); std::process::exit(1); }
             }
         }
     }

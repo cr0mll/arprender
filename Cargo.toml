@@ -1,6 +1,8 @@
 [package]
 name = "arprender"
 version = "0.1.0"
+author = "cr0mll"
+about = "A suite for advanced ARP-based attacks."
 edition = "2021"
 
 [dependencies]

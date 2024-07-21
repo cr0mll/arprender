@@ -1,4 +1,3 @@
-use core::fmt;
 use std::net::Ipv4Addr;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -8,6 +7,8 @@ use pnet::util::MacAddr;
 
 use pnet::packet::arp::{ArpHardwareTypes, ArpOperations, ArpPacket, MutableArpPacket};
 use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
+
+use crate::utils::is_timeout_expired;
 
 pub mod nic;
 
@@ -130,15 +131,10 @@ pub fn resolve_mac(
     Ok(None)
 }
 
-fn is_timeout_expired(start: Instant, timeout: Duration) -> bool {
-    Instant::now().duration_since(start) > timeout
-}
-
 pub fn arp_scan(interface: &NetworkInterface, timeout: Duration) -> Result<Vec<(Ipv4Addr, MacAddr)>, InterfaceError>{
     let Some(network) = interface.network() else { return Err(InterfaceError::MissingIP); };
 
     let Some(interface_mac) = interface.mac() else { return Err(InterfaceError::MissingMAC); };
-    let Some(interface_ip) = interface.ipv4_address() else {return Err(InterfaceError::MissingIP); };
     let mut hosts: Vec<(Ipv4Addr, MacAddr)> = Vec::new();
 
     use pnet::datalink::*;
@@ -183,7 +179,7 @@ pub fn arp_scan(interface: &NetworkInterface, timeout: Duration) -> Result<Vec<(
     });
 
     for ip in network.into_iter() {
-        send_arp_request(interface, ip, None, None);
+        send_arp_request(interface, ip, None, None).unwrap();
     }
 
     let hosts = listener.join().unwrap();

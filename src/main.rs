@@ -1,11 +1,12 @@
 use std::time::Duration;
 
-use arprender::{arp_scan, resolve_mac, send_arp_request};
+use arprender::{arp_scan, resolve_mac};
 use clap::Parser;
 use cli::{Args, Commands};
 
 pub mod cli;
 pub mod arprender;
+pub mod utils;
 
 fn main() {
     let args = Args::parse();
@@ -17,7 +18,7 @@ fn main() {
                 println!("{} @ {}", interface.name(), match interface.mac() { Some(addr) => addr.to_string(), None => "None".to_string()});
             }
         },
-        Commands::Scan{ interface_name } => {
+        Commands::Scan{ interface: interface_name } => {
             match arprender::nic::get_interface_by_name(&interface_name) {
                 Ok(interface) => {
                     match arp_scan(&interface, Duration::from_secs(5))

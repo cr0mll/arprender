@@ -1,10 +1,10 @@
 [package]
 name = "arprender"
 version = "0.1.0"
-author = "cr0mll"
-about = "A suite for advanced ARP-based attacks."
+license = "MIT"
 edition = "2021"
 
 [dependencies]
 pnet = "0.35.0"
-clap = { version = "4.5.9", features = ["derive"] } 
+clap = { version = "4.5.9", features = ["derive"] }
+rand = "0.8.5"

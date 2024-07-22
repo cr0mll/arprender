@@ -36,5 +36,25 @@ pub enum Commands {
 
         /// The interface to use for the address resolution.
         interface: String
-    }
+    },
+
+    #[command(help_template = "Arprender v{version}\n{about-with-newline}cr0mll (C) cr0mll@protonmail.com \n\n{usage-heading} {usage}\n\n{all-args}")]
+    /// Impersonates the target host by tricking all devices on the network to forward all traffic intended for the target to you.
+    Impersonate {
+        /// The IP address of the target.
+        #[arg(required = true)]
+        target: Ipv4Addr,
+
+        /// The interface to use for the attack.
+        #[arg(required = true)]
+        interface: String,
+
+        #[arg(default_value = "false", long, short)]
+        /// Attempt a stealthier, but less reliable, form of the attack.
+        stealthy: bool,
+
+        /// The interval (in seconds) at which to repeat the attack in order to ensure it remains effective.
+        #[arg(default_value = "5", long, short)]
+        period: u16
+    },
 }

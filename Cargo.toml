@@ -8,3 +8,4 @@ edition = "2021"
 pnet = "0.35.0"
 clap = { version = "4.5.9", features = ["derive"] }
 rand = "0.8.5"
+tabled = "0.15.0"

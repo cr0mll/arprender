@@ -4,6 +4,7 @@ use clap::Parser;
 use cli::{Args, Commands};
 
 use arprender::{arp_scan, resolve_mac, send_arp_reply, send_arp_request};
+use tabled::{settings::{Alignment, Settings}, Table};
 use utils::{is_timer_expired, random_ip_in_network};
 
 pub mod arprender;
@@ -16,16 +17,21 @@ fn main() {
     match args.cmd {
         Commands::Interfaces => {
             let interfaces = arprender::nic::get_interfaces();
+            
+            // Prepare pretty formatting
+            let table_config = Settings::default().with(Alignment::center());
+            let mut interfaces_table = tabled::builder::Builder::new();
+            interfaces_table.push_record(["Name", "MAC Address", "IP Address"]);
+            
             for interface in interfaces {
-                println!(
-                    "{} @ {}",
-                    interface.name(),
-                    match interface.mac() {
-                        Some(addr) => addr.to_string(),
-                        None => "None".to_string(),
-                    }
-                );
+                let mac_str = match interface.mac() { Some(mac) => mac.to_string(), None => "None".to_string() } ;
+                let ip_str = match interface.ipv4_address() { Some(ip) => ip.to_string(), None => "None".to_string() } ;
+
+                interfaces_table.push_record([interface.name(), &mac_str, &ip_str]);
             }
+
+            let mut interfaces_table = interfaces_table.build();
+            println!("{}", interfaces_table.with(table_config).to_string());
         }
         Commands::Scan {
             interface: interface_name,

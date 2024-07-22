@@ -1,10 +1,11 @@
+use core::fmt;
 use std::{net::Ipv4Addr, time::{Duration, Instant}};
 
 use pnet::{ipnetwork::Ipv4Network, util::MacAddr};
 use rand::{Rng, RngCore};
 
-pub fn is_timer_expired(start: Instant, timeout: Duration) -> bool {
-    Instant::now().duration_since(start) > timeout
+pub fn is_timer_expired(start: Instant, timer: Duration) -> bool {
+    Instant::now().duration_since(start) > timer
 }
 
 pub fn random_mac() -> MacAddr {

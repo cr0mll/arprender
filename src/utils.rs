@@ -54,3 +54,5 @@ macro_rules! loop_attack {
         }
     };
 }
+
+pub(crate) use loop_attack;

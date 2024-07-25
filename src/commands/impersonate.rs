@@ -20,7 +20,7 @@ pub fn impersonate(interface: String, target: Ipv4Addr, stealthy: bool, period: 
                 // Generate a random IP in the range of the network to make the ARP request look legitimate.
                 let attack = || {
                     let decoy_ip = loop {
-                        let random_ip = random_ip_in_network(net);
+                        let random_ip = random_ip_in_network(&net);
 
                         // Ensure that the random IP is different from the target in order to prevent any interference from a potential ARP response from the target.
                         if random_ip.ne(&target) {
@@ -55,7 +55,7 @@ pub fn impersonate(interface: String, target: Ipv4Addr, stealthy: bool, period: 
                         );
 
                         println!("Launching ARP impersonation attack...");
-                        let attack = || {
+                        let attack = move || {
                             for host in &hosts {
                                 arp::send_arp_reply(
                                     &interface,

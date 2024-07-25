@@ -34,8 +34,8 @@ impl NetworkInterface {
         }
     }
 
-    pub fn network(&self) -> &Option<pnet::ipnetwork::Ipv4Network> {
-        &self.ipv4_net
+    pub fn network(&self) -> Option<pnet::ipnetwork::Ipv4Network> {
+        self.ipv4_net
     }
 }
 

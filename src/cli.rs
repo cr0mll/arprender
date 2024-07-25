@@ -25,7 +25,11 @@ pub enum Commands {
     /// Performs an ARP scan of the network.
     Scan {
         /// The network interface to use for the scan. 
-        interface: String
+        interface: String,
+
+        /// A timeout (in seconds) after which to cease awaiting responses to the scan.
+        #[arg(short, long, required = false, default_value = "10")]
+        timeout: u16
     },
 
     #[command(help_template = "Arprender v{version}\n{about-with-newline}cr0mll (C) cr0mll@protonmail.com \n\n{usage-heading} {usage}\n\n{all-args}")]
@@ -35,7 +39,11 @@ pub enum Commands {
         address: Ipv4Addr,
 
         /// The interface to use for the address resolution.
-        interface: String
+        interface: String,
+
+        #[arg(short, long, required = false, default_value = "10")]
+        /// A timeout (in seconds) after which to cease waiting for an ARP response.
+        timeout: u16
     },
 
     #[command(help_template = "Arprender v{version}\n{about-with-newline}cr0mll (C) cr0mll@protonmail.com \n\n{usage-heading} {usage}\n\n{all-args}")]

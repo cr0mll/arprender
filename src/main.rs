@@ -12,16 +12,14 @@ fn main() {
     let args = Args::parse();
 
     match args.cmd {
-        Commands::Interfaces =>commands::interfaces(),
-        Commands::Scan {
-            interface,
-        } => commands::scan(interface, 5),
-        Commands::Resolve { interface, address } => commands::resolve(interface, address, 10),
+        Commands::Interfaces => commands::interfaces(),
+        Commands::Scan { interface, timeout } => commands::scan(interface, timeout),
+        Commands::Resolve { interface, address, timeout } => commands::resolve(interface, address, timeout),
         Commands::Impersonate {
-            target,
             interface,
+            target,
             stealthy,
             period,
-        } => commands::impersonate(interface, target, stealthy, period)
+        } => commands::impersonate(interface, target, stealthy, period),
     }
 }

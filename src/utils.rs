@@ -1,6 +1,5 @@
 use std::{
-    net::Ipv4Addr,
-    time::{Duration, Instant},
+    net::Ipv4Addr, sync::mpsc::{self, RecvTimeoutError}, thread, time::{Duration, Instant}
 };
 
 use pnet::{ipnetwork::Ipv4Network, util::MacAddr};
@@ -8,6 +7,30 @@ use rand::{Rng, RngCore};
 
 pub fn is_timer_expired(start: Instant, timer: Duration) -> bool {
     Instant::now().duration_since(start) > timer
+}
+
+#[derive(Debug)]
+pub struct TimeoutError;
+
+pub fn run_with_timeout<F, T>(f: F, timeout: Duration) -> Result<T, TimeoutError>
+where
+    F: FnOnce() -> T + Send + 'static,
+    T: Send + 'static,
+{
+    let (tx, rx) = mpsc::channel();
+    let _ = thread::spawn(move || {
+        let result = f();
+        match tx.send(result) {
+            Ok(()) => {} // everything good
+            Err(_) => {} // we have been released, don't panic
+        }
+    });
+
+    match rx.recv_timeout(timeout) {
+        Ok(result) => Ok(result),
+        Err(RecvTimeoutError::Timeout) => Err(TimeoutError),
+        Err(RecvTimeoutError::Disconnected) => unreachable!(),
+    }
 }
 
 pub fn random_mac() -> MacAddr {

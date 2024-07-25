@@ -5,7 +5,7 @@ use crate::arp;
 
 pub fn resolve(interface: String, address: Ipv4Addr, timeout: u16) {
     match arp::nic::get_interface_by_name(&interface) {
-        Ok(interface) => match arp::resolve_mac(&interface, address, Duration::from_secs(timeout.into())) {
+        Ok(interface) => match arp::resolve_mac(interface, address, Duration::from_secs(timeout.into())) {
             Ok(mac) => match mac {
                 Some(mac) => {
                     println!("IP {} has MAC address {}", address, mac);

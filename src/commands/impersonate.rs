@@ -68,7 +68,7 @@ pub fn impersonate(interface: String, target: Ipv4Addr, stealthy: bool, period: 
                             }
                         };
 
-                        loop_attack!(attack, period);
+                        loop_attack!(attack, Duration::from_secs(0));
                     }
                     Err(err) => {
                         eprintln!("{}", err.to_string());

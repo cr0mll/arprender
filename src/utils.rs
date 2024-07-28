@@ -59,7 +59,7 @@ pub fn random_ip_in_network(net: &Ipv4Network) -> Ipv4Addr {
 }
 
 macro_rules! loop_attack {
-    ($attack:ident, $period:ident) => {
+    ($attack:ident, $period:expr) => {
         let mut start = Instant::now();
         $attack();
         if !$period.is_zero() {

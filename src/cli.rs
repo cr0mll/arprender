@@ -61,8 +61,8 @@ pub enum Commands {
         /// Attempt a stealthier, but less reliable, form of the attack.
         stealthy: bool,
 
-        /// The interval (in seconds) at which to repeat the attack in order to ensure it remains effective.
-        #[arg(default_value = "5", long, short)]
+        /// The interval (in seconds) at which to repeat a stealthy attack in order to ensure it remains effective.
+        #[arg(default_value = "5", long, short, requires = "stealthy")]
         period: u16
     },
 }
